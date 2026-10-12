@@ -27,7 +27,7 @@ function App() {
     }
 
     try{
-      const response = await fetch('https://bulk-mail-app-1hzj.onrender.com/api/emails/send',{
+      const response = await fetch('https://bulk-mail-app-1hrj.onrender.com/api/emails/send',{
         method:'POST',
         headers:{
           'Content-Type':'application/json',
