@@ -2,9 +2,23 @@ import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import mongoose from 'mongoose'
-import { Resend } from 'resend'
+import { google } from 'googleapis'
 
 dotenv.config()
+
+const oauth2Client = new google.auth.OAuth2(
+  process.env.GMAIL_CLIENT_ID,
+  process.env.GMAIL_CLIENT_SECRET
+)
+
+oauth2Client.setCredentials({
+  refresh_token: process.env.GMAIL_REFRESH_TOKEN
+})
+
+const gmail = google.gmail({
+  version: 'v1',
+  auth: oauth2Client
+})
 
 const app = express()
 
@@ -81,21 +95,29 @@ app.post('/api/emails/send', async (req, res) => {
     })
 
 
-    const resend = new Resend(process.env.RESEND_API_KEY);
+    const rawMessage = [
+      `From: ${process.env.GMAIL_USER}`,
+      `To: ${recipientList.join(', ')}`,
+      `Subject: ${subject.trim()}`,
+      'MIME-Version: 1.0',
+      'Content-Type: text/plain; charset="UTF-8"',
+      '',
+      body
+    ].join('\r\n');
 
-    const { data, error } = await resend.emails.send({
-      from: 'Bulk Mail App <onboarding@resend.dev>',
-      to: ['elamathi24it@gmail.com'],
-      bcc: recipientList,
-      subject: subject.trim(),
-      text: body
+    const encodedMessage = Buffer.from(rawMessage)
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+
+    await gmail.users.messages.send({
+      userId: 'me',
+      requestBody: { raw: encodedMessage }
     });
 
-    if (error) {
-      throw new Error(error.message);
-    }
+    record.status = 'sent';
 
-    record.status = 'sent'
     await record.save()
 
     return res.json({

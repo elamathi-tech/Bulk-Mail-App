@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import './App.css'
 
 
@@ -6,6 +6,24 @@ function App() {
   const [subject, setSubject] = useState('');
   const [recipients, setRecipients] = useState('');
   const [body, setBody] = useState('');
+  const [history, setHistory] = useState([]);
+
+  useEffect(() => {
+  const fetchHistory = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/emails/history');
+      if (!response.ok) {
+        throw new Error('Failed to fetch email history');
+      }
+      const data = await response.json();
+      setHistory(data);
+    } catch (error) {
+      console.error('Error fetching email history:', error);
+    }
+  };
+
+  fetchHistory();
+}, []);
 
   const handleSubmit = async(event) => {
     event.preventDefault();
@@ -27,7 +45,7 @@ function App() {
     }
 
     try{
-      const response = await fetch('https://bulk-mail-app-1hrj.onrender.com/api/emails/send',{
+      const response = await fetch('http://localhost:5000/api/emails/send',{
         method:'POST',
         headers:{
           'Content-Type':'application/json',
@@ -98,7 +116,26 @@ function App() {
 
         <button type='submit' className='send-button'>Send Email</button>
       </form>
+
+            <section className="history-section">
+        <h2>Email History</h2>
+
+        {history.length === 0 ? (
+          <p>No email history found.</p>
+        ) : (
+          history.map((email) => (
+            <div key={email._id} className="history-item">
+              <h3>{email.subject}</h3>
+              <p><strong>Recipients:</strong> {email.recipients.join(', ')}</p>
+              <p><strong>Status:</strong> {email.status}</p>
+              <p><strong>Date:</strong> {new Date(email.createdAt).toLocaleString()}</p>
+            </div>
+          ))
+        )}
+      </section>
     </div>  
+
+    
     
   )
 }
